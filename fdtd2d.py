@@ -93,11 +93,22 @@ def make_step(d, p):
             d['hz'] [i,j] = d['hzx'][i,j] + d['hzy'][i,j]
 
 def save_to_hdf5(output_directory_name, n, data):
-    """Saves current data to hdf5 file with sub-index 'n'"""
+    """Save current data to hdf5 file with sub-index 'n'"""
     file_name = '{}/data_{}.hdf5'.format(output_directory_name, n)
     with h5py.File(file_name,'w') as f:
         for key, value in data.items():
             f.create_dataset(key, data=value)
+
+def output(d, k, p):
+    """Make output"""
+    if k%p["output"]["iteration_pass"] == 0:
+        save_to_hdf5(
+                p["output"]["directory_name"],
+                k//p["output"]["iteration_pass"],
+                d)
+        return True
+    else:
+        return False
 
 def run(init_params_dict):
     """Run the simulations"""
@@ -107,3 +118,4 @@ def run(init_params_dict):
         _time = k*_params_dict['time_step']
         generate_fields_x_min(_data, _time, _params_dict)
         make_step(_data, _params_dict)
+        output(_data, _params_dict)

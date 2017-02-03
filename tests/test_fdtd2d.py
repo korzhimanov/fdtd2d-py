@@ -25,6 +25,9 @@ def params_correct():
     params['time_steps'] = np.int32(80)
     params['laser_pulse_y_shape'] = laser_pulse_gauss(params['x_bounds'][0], 1., 2.)
     params['laser_pulse_z_shape'] = laser_pulse_gauss(params['x_bounds'][0], 1., 2.)
+    params["output"] = {}
+    params["output"]["iteration_pass"] = 10
+    params["output"]["directory_name"] = "tests/output"
     return params
 
 @pytest.fixture
@@ -101,6 +104,19 @@ def test_save_to_hdf5(data_empty):
     
     loaded_data = {}
     with h5py.File("tests/output/data_0.hdf5", "r") as f:
+        for key, value in data_empty.items():
+            assert(key in f)
+            loaded_data[key] = np.array(f[key])
+            assert(np.sum(loaded_data[key] - data_empty[key]) == 0.0)
+
+def test_output(data_empty, params_calculated):
+    assert(not fdtd2d.output(data_empty, 1, params_calculated))
+    
+    assert(fdtd2d.output(data_empty, 10, params_calculated))
+    assert(os.path.exists("tests/output/data_1.hdf5"))
+    
+    loaded_data = {}
+    with h5py.File("tests/output/data_1.hdf5", "r") as f:
         for key, value in data_empty.items():
             assert(key in f)
             loaded_data[key] = np.array(f[key])
