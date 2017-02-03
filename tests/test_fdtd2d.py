@@ -22,7 +22,7 @@ def params_correct():
     params['x_bounds'] = (0.0, 8.0)
     params['y_bounds'] = (-4.0, 4.0)
     params['matrix_size'] = {'x':64, 'y':64}
-    params['time_steps'] = np.int32(80)
+    params['time_steps'] = np.int32(81)
     params['laser_pulse_y_shape'] = laser_pulse_gauss(params['x_bounds'][0], 1., 2.)
     params['laser_pulse_z_shape'] = laser_pulse_gauss(params['x_bounds'][0], 1., 2.)
     params["output"] = {}
@@ -123,7 +123,11 @@ def test_output(data_empty, params_calculated):
             assert(np.sum(loaded_data[key] - data_empty[key]) == 0.0)
 
 def test_run(params_correct):
-    #fdtd2d.run(params_correct)
-    assert(os.path.exists("output.hdf5"))
-    with h5py.File("output.hdf5", "r") as f:
-        assert(f["ez"] == np.zeros(shape=(64,64), dtype=np.float64))
+    fdtd2d.run(params_correct)
+    for n in range(9):
+        assert(os.path.exists("tests/output/data_{}.hdf5".format(n)))
+    with h5py.File("tests/output/data_8.hdf5", "r") as calculated_data, \
+         h5py.File("tests/data/run.hdf5", "r") as correct_data:
+        for key in correct_data.keys():
+            assert(np.sum(np.array(calculated_data[key])
+                        - np.array(correct_data[key])) == 0.0)

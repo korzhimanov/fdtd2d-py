@@ -118,4 +118,4 @@ def run(init_params_dict):
         _time = k*_params_dict['time_step']
         generate_fields_x_min(_data, _time, _params_dict)
         make_step(_data, _params_dict)
-        output(_data, _params_dict)
+        output(_data, k, _params_dict)
