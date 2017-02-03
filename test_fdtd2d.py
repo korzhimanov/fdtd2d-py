@@ -22,7 +22,7 @@ def params_correct():
     params['x_bounds'] = (0.0, 8.0)
     params['y_bounds'] = (-4.0, 4.0)
     params['matrix_size'] = {'x':64, 'y':64}
-    params['time_steps'] = 80
+    params['time_steps'] = np.int32(80)
     params['laser_pulse_y_shape'] = laser_pulse_gauss(params['x_bounds'][0], 1., 2.)
     params['laser_pulse_z_shape'] = laser_pulse_gauss(params['x_bounds'][0], 1., 2.)
     return params
@@ -50,25 +50,58 @@ def test_params_calculation(params_calculated):
     assert(p['cfl']['x'] == np.sqrt(0.5))
     assert(p['cfl']['y'] == np.sqrt(0.5))
 
+def test_init_data(data_empty, params_calculated):
+    d = fdtd2d.init_data(params_calculated)
+    for name in ('ex','ey','ezx','ezy','ez','hx','hy','hzx','hzy','hz'):
+        assert((d[name] == data_empty[name]).all())
+    
 def test_field_generator_x_min(data_empty, params_calculated):
     d = copy.deepcopy(data_empty)
     p = params_calculated
     fdtd2d.generate_fields_x_min(d, 0.0, p)
-    #np.savez_compressed('data_test/field_generator_x_min',
-    #                    ey=d['ey'], hzx=d['hzx'], hz=d['hz'],
-    #                    hy=d['hy'], ezx=d['ezx'], ez=d['ez'])
-    with np.load('data_test/field_generator_x_min.npz') as correct_data:
-        for name in ('ey','hzx','hz','hy','ezx','ez'):
-            assert((d[name] == correct_data[name]).all())
-    
+#    with h5py.File('data_test/field_generator_x_min.hdf5','w') as f:
+#        for key, value in d.items():
+#            f.create_dataset(key, data=value)
+    with h5py.File('data_test/field_generator_x_min.hdf5','r') as correct_data:
+        for key in correct_data.keys():
+            assert((d[key] == correct_data[key]).all())
+
+def test_make_step_with_empty_data(data_empty, params_calculated):
+    d = copy.deepcopy(data_empty)
+    fdtd2d.make_step(d, params_calculated)
+    for name in ('ey','hzx','hz','hy','ezx','ez'):
+        assert((d[name] == data_empty[name]).all())
+
+def test_make_step(data_empty, params_calculated):
+#    _data = copy.deepcopy(data_empty)
+#    for k in range(params_calculated['time_steps']*2//3):
+#        _time = k*params_calculated['time_step']
+#        fdtd2d.generate_fields_x_min(_data, _time, params_calculated)
+#        fdtd2d.make_step(_data, params_calculated)
+#    with h5py.File('data_test/make_step_init.hdf5','w') as f:
+#        for key, value in _data.items():
+#            f.create_dataset(key, data=value)
+#    fdtd2d.make_step(_data, params_calculated)
+#    with h5py.File('data_test/make_step.hdf5','w') as f:
+#        for key, value in _data.items():
+#            f.create_dataset(key, data=value)
+    with h5py.File('data_test/make_step_init.hdf5','r') as f, \
+         h5py.File('data_test/make_step.hdf5','r') as correct_data:
+        data = copy.deepcopy(data_empty)
+        for key in f.keys():
+            data[key] = np.array(f[key])
+        fdtd2d.make_step(data, params_calculated)
+        for name in ('ex','ey','ezx','ezy','ez','hx','hy','hzx','hzy','hz'):
+            assert(np.sum(data[name] - correct_data[name]) == 0.0)
+
 def test_hdf5(params_correct):
-    fdtd2d.run(params_correct)
+    #fdtd2d.run(params_correct)
     assert(os.path.exists("output.hdf5"))
     with h5py.File("output.hdf5", "r") as f:
         assert("ey" in f)
 
 def test_run(params_correct):
-    fdtd2d.run(params_correct)
+    #fdtd2d.run(params_correct)
     assert(os.path.exists("output.hdf5"))
     with h5py.File("output.hdf5", "r") as f:
         assert(f["ez"] == np.zeros(shape=(64,64), dtype=np.float64))
