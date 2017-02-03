@@ -93,6 +93,7 @@ def make_step(d, p):
             d['hz'] [i,j] = d['hzx'][i,j] + d['hzy'][i,j]
 
 def save_to_hdf5(output_directory_name, n, data):
+    """Saves current data to hdf5 file with sub-index 'n'"""
     file_name = '{}/data_{}.hdf5'.format(output_directory_name, n)
     with h5py.File(file_name,'w') as f:
         for key, value in data.items():
