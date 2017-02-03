@@ -59,10 +59,10 @@ def test_field_generator_x_min(data_empty, params_calculated):
     d = copy.deepcopy(data_empty)
     p = params_calculated
     fdtd2d.generate_fields_x_min(d, 0.0, p)
-#    with h5py.File('data_test/field_generator_x_min.hdf5','w') as f:
+#    with h5py.File('tests/data/field_generator_x_min.hdf5','w') as f:
 #        for key, value in d.items():
 #            f.create_dataset(key, data=value)
-    with h5py.File('data_test/field_generator_x_min.hdf5','r') as correct_data:
+    with h5py.File('tests/data/field_generator_x_min.hdf5','r') as correct_data:
         for key in correct_data.keys():
             assert((d[key] == correct_data[key]).all())
 
@@ -78,15 +78,15 @@ def test_make_step(data_empty, params_calculated):
 #        _time = k*params_calculated['time_step']
 #        fdtd2d.generate_fields_x_min(_data, _time, params_calculated)
 #        fdtd2d.make_step(_data, params_calculated)
-#    with h5py.File('data_test/make_step_init.hdf5','w') as f:
+#    with h5py.File('tests/data/make_step_init.hdf5','w') as f:
 #        for key, value in _data.items():
 #            f.create_dataset(key, data=value)
 #    fdtd2d.make_step(_data, params_calculated)
-#    with h5py.File('data_test/make_step.hdf5','w') as f:
+#    with h5py.File('tests/data/make_step.hdf5','w') as f:
 #        for key, value in _data.items():
 #            f.create_dataset(key, data=value)
-    with h5py.File('data_test/make_step_init.hdf5','r') as f, \
-         h5py.File('data_test/make_step.hdf5','r') as correct_data:
+    with h5py.File('tests/data/make_step_init.hdf5','r') as f, \
+         h5py.File('tests/data/make_step.hdf5','r') as correct_data:
         data = copy.deepcopy(data_empty)
         for key in f.keys():
             data[key] = np.array(f[key])
@@ -95,12 +95,12 @@ def test_make_step(data_empty, params_calculated):
             assert(np.sum(data[name] - correct_data[name]) == 0.0)
 
 def test_save_to_hdf5(data_empty):
-    fdtd2d.save_to_hdf5("output_test", 0, data_empty)
+    fdtd2d.save_to_hdf5("tests/output", 0, data_empty)
     
-    assert(os.path.exists("output_test/data_0.hdf5"))
+    assert(os.path.exists("tests/output/data_0.hdf5"))
     
     loaded_data = {}
-    with h5py.File("output_test/data_0.hdf5", "r") as f:
+    with h5py.File("tests/output/data_0.hdf5", "r") as f:
         for key, value in data_empty.items():
             assert(key in f)
             loaded_data[key] = np.array(f[key])
