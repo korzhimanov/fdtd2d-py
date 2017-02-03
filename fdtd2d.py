@@ -80,14 +80,14 @@ def generate_fields_x_min(d, time, p):
     
     generate_hy_x_min(d['hy'],
                       p['laser_pulse_z_shape'],
-                      time,
-                      p['x_bounds'][0] + p['space_step']['x'],
-                      p['y1'])
-    generate_ezx_x_min(d['ezx'],
-                      p['laser_pulse_z_shape'],
                       time + 0.5*p['time_step'],
                       p['x_bounds'][0] + 1.5*p['space_step']['x'],
                       p['y2'])
+    generate_ezx_x_min(d['ezx'],
+                      p['laser_pulse_z_shape'],
+                      time,
+                      p['x_bounds'][0] + p['space_step']['x'],
+                      p['y1'])
     generate_ez_x_min(d['ez'], d['ezx'], d['ezy'])
     generate_hz_x_min(d['hz'], d['hzx'], d['hzy'])
 
