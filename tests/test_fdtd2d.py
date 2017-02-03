@@ -14,7 +14,7 @@ import fdtd2d
 import pytest
 
 def laser_pulse_gauss(x_min, width, duration):
-    @numba.jit
+    @numba.jit(nopython=True)
     def f(t, x, y):
         return np.exp(-(y/width)**2)*np.exp(
             -((t - (x - x_min))/duration-2.0)**2)*np.sin(2.*np.pi*(t - x))
