@@ -3,6 +3,7 @@
 import copy
 import numpy as np
 import h5py
+import numba
 
 def calculate_params(init_params):
     """Calculate parameters needed for simulation and return them as a dictionary."""
@@ -34,63 +35,141 @@ def init_data(params):
                 dtype=np.float64)
     return _data
 
+@numba.jit
+def generate_ey_x_min(ey, shape, t, x, y0, dy):
+    for j in range(ey.shape[1]):
+        ey[1,j] -= shape(t, x, y0+j*dy)
+
+@numba.jit
+def generate_hzx_x_min(hzx, shape, t, x, y0, dy):
+    for j in range(hzx.shape[1]-1):
+        hzx[1,j] -= shape(t, x, y0+(j-0.5)*dy)
+
+@numba.jit
+def generate_hy_x_min(hy, shape, t, x, y0, dy):
+    for j in range(hy.shape[1]-1):
+        hy[1,j] -= shape(t, x, y0+j*dy)
+
+@numba.jit
+def generate_ezx_x_min(ezx, shape, t, x, y0, dy):
+    for j in range(ezx.shape[1]):
+        ezx[1,j] -= shape(t, x, y0+(j-0.5)*dy)
+
+@numba.jit
+def generate_ez_x_min(ez, ezx, ezy):
+    for j in range(ez.shape[1]):
+        ez[1,j] = ezx[1,j] + ezy[1,j]
+
+@numba.jit
+def generate_hz_x_min(hz, hzx, hzy):
+    for j in range(hz.shape[1]-1):
+        hz[1,j] = hzx[1,j] + hzy[1,j]
+
+@numba.jit
 def generate_fields_x_min(d, time, p):
     """Generate fields at left boundary (x_min = p['x_bounds'][0]) at time moment 'time'"""
-    for j in range(p['matrix_size']['y']):
-        d['ey'] [1,j] -= p['laser_pulse_y_shape'](
-                time,
-                p['x_bounds'][0] + p['space_step']['x'],
-                p['y_bounds'][0] + j*p['space_step']['y'])
-        d['ezx'][1,j] -= p['laser_pulse_z_shape'](
-                time + 0.5*p['time_step'],
-                p['x_bounds'][0] + 1.5*p['space_step']['x'],
-                p['y_bounds'][0] + (j-0.5)*p['space_step']['y'])
-        d['ez'] [1,j]  = d['ezx'][1,j] + d['ezy'][1,j]
+    generate_ey_x_min(d['ey'],
+                      p['laser_pulse_y_shape'],
+                      time,
+                      p['x_bounds'][0] + p['space_step']['x'],
+                      p['y_bounds'][0],
+                      p['space_step']['y'])
+    generate_hzx_x_min(d['hzx'],
+                      p['laser_pulse_y_shape'],
+                      time + 0.5*p['time_step'],
+                      p['x_bounds'][0] + 1.5*p['space_step']['x'],
+                      p['y_bounds'][0],
+                      p['space_step']['y'])
     
-    for j in range(p['matrix_size']['y']-1):
-        d['hy'] [1,j] -= p['laser_pulse_z_shape'](
-                time,
-                p['x_bounds'][0] + p['space_step']['x'],
-                p['y_bounds'][0] + j*p['space_step']['y'])
-        d['hzx'][1,j] -= p['laser_pulse_y_shape'](
-                time + 0.5*p['time_step'],
-                p['x_bounds'][0] + 1.5*p['space_step']['x'],
-                p['y_bounds'][0] + (j-0.5)*p['space_step']['y'])
-        d['hz'] [1,j]  = d['hzx'][1,j] + d['hzy'][1,j]
+    generate_hy_x_min(d['hy'],
+                      p['laser_pulse_z_shape'],
+                      time,
+                      p['x_bounds'][0] + p['space_step']['x'],
+                      p['y_bounds'][0],
+                      p['space_step']['y'])
+    generate_ezx_x_min(d['ezx'],
+                      p['laser_pulse_z_shape'],
+                      time + 0.5*p['time_step'],
+                      p['x_bounds'][0] + 1.5*p['space_step']['x'],
+                      p['y_bounds'][0],
+                      p['space_step']['y'])
+    generate_ez_x_min(d['ez'], d['ezx'], d['ezy'])
+    generate_hz_x_min(d['hz'], d['hzx'], d['hzy'])
 
+@numba.jit
+def update_ex(ex, hz, half_cfl):
+    for j in range(1,ex.shape[1]-1):
+        for i in range(1,ex.shape[0]-1):
+            ex[i,j] += half_cfl*(hz[i,j] + hz[i-1,j] - hz[i,j-1] - hz[i-1,j-1])
+
+@numba.jit
+def update_ey(ey, hz, half_cfl):
+    for j in range(1,ey.shape[1]-1):
+        for i in range(1,ey.shape[0]-1):
+            ey[i,j] -= half_cfl*(hz[i,j] + hz[i,j-1] - hz[i-1,j] - hz[i-1,j-1])
+
+@numba.jit
+def update_ezx(ezx, hy, half_cfl):
+    for j in range(1,ezx.shape[1]-1):
+        for i in range(1,ezx.shape[0]-1):
+            ezx[i,j] += half_cfl*(hy[i,j] + hy[i,j-1] - hy[i-1,j] - hy[i-1,j-1])
+
+@numba.jit
+def update_ezy(ezy, hx, half_cfl):
+    for j in range(1,ezy.shape[1]-1):
+        for i in range(1,ezy.shape[0]-1):
+            ezy[i,j] -= half_cfl*(hx[i,j] + hx[i-1,j] - hx[i,j-1] - hx[i-1,j-1])
+
+@numba.jit
+def update_ez(ez, ezx, ezy):
+    for j in range(1,ez.shape[1]-1):
+        for i in range(1,ez.shape[0]-1):
+            ez[i,j] = ezx[i,j] + ezy[i,j]
+
+@numba.jit
+def update_hx(hx, ez, half_cfl):
+    for j in range(hx.shape[1]-1):
+        for i in range(hx.shape[0]-1):
+            hx[i,j] -= half_cfl*(ez[i+1,j+1] + ez[i,j+1] - ez[i+1,j] - ez[i,j])
+
+@numba.jit
+def update_hy(hy, ez, half_cfl):
+    for j in range(hy.shape[1]-1):
+        for i in range(hy.shape[0]-1):
+            hy[i,j] += half_cfl*(ez[i+1,j+1] + ez[i+1,j] - ez[i,j+1] - ez[i,j])
+
+@numba.jit
+def update_hzx(hzx, ey, half_cfl):
+    for j in range(hzx.shape[1]-1):
+        for i in range(hzx.shape[0]-1):
+            hzx[i,j] -= half_cfl*(ey[i+1,j+1] + ey[i+1,j] - ey[i,j+1] - ey[i,j])
+
+@numba.jit
+def update_hzy(hzy, ex, half_cfl):
+    for j in range(hzy.shape[1]-1):
+        for i in range(hzy.shape[0]-1):
+            hzy[i,j] += half_cfl*(ex[i+1,j+1] + ex[i,j+1] - ex[i+1,j] - ex[i,j])
+
+@numba.jit
+def update_hz(hz, hzx, hzy):
+    for j in range(hz.shape[1]-1):
+        for i in range(hz.shape[0]-1):
+            hz[i,j] = hzx[i,j] + hzy[i,j]
+
+@numba.jit
 def make_step(d, p):
     """Make step"""
-    for j in range(1,p['matrix_size']['y']-1):
-        for i in range(1,p['matrix_size']['x']-1):
-            d['ex'] [i,j] += 0.5*p['cfl']['y']*(
-                    d['hz'][i,j] + d['hz'][i-1,j]
-                    - d['hz'][i,j-1] - d['hz'][i-1,j-1])
-            d['ey'] [i,j] -= 0.5*p['cfl']['x']*(
-                    d['hz'][i,j] + d['hz'][i,j-1]
-                    - d['hz'][i-1,j] - d['hz'][i-1,j-1])
-            d['ezx'][i,j] += 0.5*p['cfl']['x']*(
-                    d['hy'][i,j] + d['hy'][i,j-1]
-                    - d['hy'][i-1,j] - d['hy'][i-1,j-1])
-            d['ezy'][i,j] -= 0.5*p['cfl']['y']*(
-                    d['hx'][i,j] + d['hx'][i-1,j]
-                    - d['hx'][i,j-1] - d['hx'][i-1,j-1])
-            d['ez'] [i,j] = d['ezx'][i,j] + d['ezy'][i,j]
-            
-    for j in range(p['matrix_size']['y']-1):
-        for i in range(p['matrix_size']['x']-1):
-            d['hx'] [i,j] -= 0.5*p['cfl']['y']*(
-                    d['ez'][i+1,j+1] + d['ez'][i,j+1]
-                    - d['ez'][i+1,j] - d['ez'][i,j])
-            d['hy'] [i,j] += 0.5*p['cfl']['x']*(
-                    d['ez'][i+1,j+1] + d['ez'][i+1,j]
-                    - d['ez'][i,j+1] - d['ez'][i,j])
-            d['hzx'][i,j] -= 0.5*p['cfl']['x']*(
-                    d['ey'][i+1,j+1] + d['ey'][i+1,j]
-                    - d['ey'][i,j+1] - d['ey'][i,j])
-            d['hzy'][i,j] += 0.5*p['cfl']['y']*(
-                    d['ex'][i+1,j+1] + d['ex'][i,j+1]
-                    - d['ex'][i+1,j] - d['ex'][i,j])
-            d['hz'] [i,j] = d['hzx'][i,j] + d['hzy'][i,j]
+    update_ex(d['ex'], d['hz'], 0.5*p['cfl']['y'])
+    update_ey(d['ey'], d['hz'], 0.5*p['cfl']['x'])
+    update_ezx(d['ezx'], d['hy'], 0.5*p['cfl']['x'])
+    update_ezy(d['ezy'], d['hx'], 0.5*p['cfl']['y'])
+    update_ez(d['ez'], d['ezx'], d['ezy'])
+    
+    update_hx(d['hx'], d['ez'], 0.5*p['cfl']['y'])
+    update_hy(d['hy'], d['ez'], 0.5*p['cfl']['x'])
+    update_hzx(d['hzx'], d['ey'], 0.5*p['cfl']['x'])
+    update_hzy(d['hzy'], d['ex'], 0.5*p['cfl']['y'])
+    update_hz(d['hz'], d['hzx'], d['hzy'])
 
 def save_to_hdf5(output_directory_name, n, data):
     """Save current data to hdf5 file with sub-index 'n'"""

@@ -7,14 +7,20 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import copy
 import numpy as np
 import h5py
+import numba
 
 import fdtd2d
 
 import pytest
 
 def laser_pulse_gauss(x_min, width, duration):
-    return lambda t, x, y: np.exp(-(y/width)**2)*np.exp(
+    @numba.jit
+    def f(t, x, y):
+        return np.exp(-(y/width)**2)*np.exp(
             -((t - (x - x_min))/duration-2.0)**2)*np.sin(2.*np.pi*(t - x))
+    return f
+    #return lambda t, x, y: np.exp(-(y/width)**2)*np.exp(
+    #        -((t - (x - x_min))/duration-2.0)**2)*np.sin(2.*np.pi*(t - x))
 
 @pytest.fixture
 def params_correct():
