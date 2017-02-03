@@ -94,11 +94,17 @@ def test_make_step(data_empty, params_calculated):
         for name in ('ex','ey','ezx','ezy','ez','hx','hy','hzx','hzy','hz'):
             assert(np.sum(data[name] - correct_data[name]) == 0.0)
 
-def test_hdf5(params_correct):
-    #fdtd2d.run(params_correct)
-    assert(os.path.exists("output.hdf5"))
-    with h5py.File("output.hdf5", "r") as f:
-        assert("ey" in f)
+def test_save_to_hdf5(data_empty):
+    fdtd2d.save_to_hdf5("output_test", 0, data_empty)
+    
+    assert(os.path.exists("output_test/data_0.hdf5"))
+    
+    loaded_data = {}
+    with h5py.File("output_test/data_0.hdf5", "r") as f:
+        for key, value in data_empty.items():
+            assert(key in f)
+            loaded_data[key] = np.array(f[key])
+            assert(np.sum(loaded_data[key] - data_empty[key]) == 0.0)
 
 def test_run(params_correct):
     #fdtd2d.run(params_correct)
