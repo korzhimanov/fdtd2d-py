@@ -58,8 +58,8 @@ def test_params_calculation(params_calculated):
     assert(p['space_step']['x'] == 0.125)
     assert(p['space_step']['y'] == 0.125)
     assert(p['time_step'] == np.sqrt(2.0)/16.0)
-    assert(p['cfl']['x'] == np.sqrt(0.5))
-    assert(p['cfl']['y'] == np.sqrt(0.5))
+    assert(p['half_cfl']['x'] == 0.5*np.sqrt(0.5))
+    assert(p['half_cfl']['y'] == 0.5*np.sqrt(0.5))
 
 def test_init_data(data_empty, params_calculated):
     d = fdtd2d.init_data(params_calculated)

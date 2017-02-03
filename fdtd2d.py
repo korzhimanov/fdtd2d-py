@@ -21,9 +21,9 @@ def calculate_params(init_params):
             np.sqrt(_params['space_step']['x']**2 +
                     _params['space_step']['y']**2))/2.0
     
-    _params['cfl'] = {}
-    _params['cfl']['x'] = _params['time_step']/_params['space_step']['x']
-    _params['cfl']['y'] = _params['time_step']/_params['space_step']['y']
+    _params['half_cfl'] = {}
+    _params['half_cfl']['x'] = 0.5*_params['time_step']/_params['space_step']['x']
+    _params['half_cfl']['y'] = 0.5*_params['time_step']/_params['space_step']['y']
     
     _params['y1'] = np.asarray(range(_params['matrix_size']['y']),
                                dtype=np.float64) * \
@@ -164,16 +164,16 @@ def update_hz(hz, hzx, hzy):
 @numba.jit
 def make_step(d, p):
     """Make step"""
-    update_ex(d['ex'], d['hz'], 0.5*p['cfl']['y'])
-    update_ey(d['ey'], d['hz'], 0.5*p['cfl']['x'])
-    update_ezx(d['ezx'], d['hy'], 0.5*p['cfl']['x'])
-    update_ezy(d['ezy'], d['hx'], 0.5*p['cfl']['y'])
+    update_ex(d['ex'], d['hz'], p['half_cfl']['y'])
+    update_ey(d['ey'], d['hz'], p['half_cfl']['x'])
+    update_ezx(d['ezx'], d['hy'], p['half_cfl']['x'])
+    update_ezy(d['ezy'], d['hx'], p['half_cfl']['y'])
     update_ez(d['ez'], d['ezx'], d['ezy'])
     
-    update_hx(d['hx'], d['ez'], 0.5*p['cfl']['y'])
-    update_hy(d['hy'], d['ez'], 0.5*p['cfl']['x'])
-    update_hzx(d['hzx'], d['ey'], 0.5*p['cfl']['x'])
-    update_hzy(d['hzy'], d['ex'], 0.5*p['cfl']['y'])
+    update_hx(d['hx'], d['ez'], p['half_cfl']['y'])
+    update_hy(d['hy'], d['ez'], p['half_cfl']['x'])
+    update_hzx(d['hzx'], d['ey'], p['half_cfl']['x'])
+    update_hzy(d['hzy'], d['ex'], p['half_cfl']['y'])
     update_hz(d['hz'], d['hzx'], d['hzy'])
 
 def save_to_hdf5(output_directory_name, n, data):
