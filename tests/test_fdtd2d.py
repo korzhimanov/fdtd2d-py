@@ -45,8 +45,10 @@ def data_empty(params_calculated):
     nx = params_calculated['matrix_size']['x']
     ny = params_calculated['matrix_size']['y']
     data = {}
-    for name in ('ex','ey','ezx','ezy','ez','hx','hy','hzx','hzy','hz'):
+    for name in ('ex','ey','ezx','ezy','ez'):
         data[name] = np.zeros(shape=(nx,ny), dtype=np.float64)
+    for name in ('hx','hy','hzx','hzy','hz'):
+        data[name] = np.zeros(shape=(nx-1,ny-1), dtype=np.float64)
     return data
 
 def test_params_calculation(params_calculated):

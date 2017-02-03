@@ -25,18 +25,27 @@ def calculate_params(init_params):
     _params['cfl']['x'] = _params['time_step']/_params['space_step']['x']
     _params['cfl']['y'] = _params['time_step']/_params['space_step']['y']
     
-    _params['y1'] = np.asarray(range(_params['matrix_size']['y']), dtype=np.float64) * \
+    _params['y1'] = np.asarray(range(_params['matrix_size']['y']),
+                               dtype=np.float64) * \
                          _params['space_step']['y'] + _params['y_bounds'][0]
-    _params['y2'] = np.asarray(range(_params['matrix_size']['y']), dtype=np.float64) * \
-                          _params['space_step']['y'] - 0.5*_params['space_step']['y'] + \
-                          _params['y_bounds'][0]
+    _params['y2'] = np.asarray(range(_params['matrix_size']['y']-1),
+                               dtype=np.float64) * \
+                                  _params['space_step']['y'] \
+                                     - 0.5*_params['space_step']['y'] \
+                                        + _params['y_bounds'][0]
     return _params
 
 def init_data(params):
     _data = {}
-    for name in ('ex','ey','ezx','ezy','ez','hx','hy','hzx','hzy','hz'):
+    for name in ('ex','ey','ezx','ezy','ez'):
         _data[name] = np.zeros(
-                shape=(params['matrix_size']['x'], params['matrix_size']['x']),
+                shape=(params['matrix_size']['x'],
+                       params['matrix_size']['y']),
+                dtype=np.float64)
+    for name in ('hx','hy','hzx','hzy','hz'):
+        _data[name] = np.zeros(
+                shape=(params['matrix_size']['x']-1,
+                       params['matrix_size']['y']-1),
                 dtype=np.float64)
     return _data
 
