@@ -1,2 +1,5 @@
+copy
+h5py
+numpy
 pytest
 sphinx

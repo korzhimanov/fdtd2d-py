@@ -5,9 +5,9 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import copy
-
 import numpy as np
 import h5py
+
 import fdtd2d
 
 import pytest
