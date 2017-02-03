@@ -4,6 +4,6 @@ def get_hmm():
     """Get a thought."""
     return 'hmmm...'
 
-def hmm():
-    """Contemplation..."""
-    print(get_hmm())
+def run(params):
+    """Run the simulations..."""
+    print('Running...')
