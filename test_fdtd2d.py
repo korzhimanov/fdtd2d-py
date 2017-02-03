@@ -19,11 +19,21 @@ def params_correct():
     params = {}
     params['x_bounds'] = (0.0, 8.0)
     params['y_bounds'] = (-4.0, 4.0)
-    params['matrix_size'] = (64, 64)
+    params['matrix_size'] = {'x':64, 'y':64}
     params['time_steps'] = 80
     params['laser_pulse_y_shape'] = laser_pulse_gauss(params['x_bounds'][0], 1., 2.)
     params['laser_pulse_z_shape'] = lambda t, x, y: 0
     return params
+
+def test_params_calculation(params_correct):
+    p = fdtd2d.calculate_params(params_correct)
+    assert(p['box_size']['x'] == 8.0)
+    assert(p['box_size']['y'] == 8.0)
+    assert(p['space_step']['x'] == 0.125)
+    assert(p['space_step']['y'] == 0.125)
+    assert(p['time_step'] == np.sqrt(2.0)/16.0)
+    assert(p['cfl']['x'] == np.sqrt(0.5))
+    assert(p['cfl']['y'] == np.sqrt(0.5))
 
 def test_hdf5(params_correct):
     fdtd2d.run(params_correct)
