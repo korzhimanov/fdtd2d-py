@@ -8,23 +8,23 @@ import numba
 def calculate_params(init_params):
     """Calculate parameters needed for simulation and return them as a dictionary."""
     _params = copy.deepcopy(init_params)
-    
+
     _params['box_size'] = {}
     _params['box_size']['x'] = _params['x_bounds'][1] - _params['x_bounds'][0]
     _params['box_size']['y'] = _params['y_bounds'][1] - _params['y_bounds'][0]
-    
+
     _params['space_step'] = {}
     _params['space_step']['x'] = _params['box_size']['x']/_params['matrix_size']['x']
     _params['space_step']['y'] = _params['box_size']['y']/_params['matrix_size']['y']
-    
+
     _params['time_step'] = (
             np.sqrt(_params['space_step']['x']**2 +
                     _params['space_step']['y']**2))/2.0
-    
+
     _params['half_cfl'] = {}
     _params['half_cfl']['x'] = 0.5*_params['time_step']/_params['space_step']['x']
     _params['half_cfl']['y'] = 0.5*_params['time_step']/_params['space_step']['y']
-    
+
     _params['y1'] = np.asarray(range(_params['matrix_size']['y']),
                                dtype=np.float64) * \
                          _params['space_step']['y'] + _params['y_bounds'][0]
@@ -73,7 +73,6 @@ def generate_ez_x_min(ez, ezx, ezy):
 def generate_hz_x_min(hz, hzx, hzy):
     hz[1] = hzx[1] + hzy[1]
 
-@numba.jit
 def generate_fields_x_min(d, time, p):
     """Generate fields at left boundary (x_min = p['x_bounds'][0]) at time moment 'time'"""
     generate_ey_x_min(d['ey'],
@@ -86,7 +85,7 @@ def generate_fields_x_min(d, time, p):
                       time + 0.5*p['time_step'],
                       p['x_bounds'][0] + 1.5*p['space_step']['x'],
                       p['y2'])
-    
+
     generate_hy_x_min(d['hy'],
                       p['laser_pulse_z_shape'],
                       time + 0.5*p['time_step'],
@@ -161,7 +160,6 @@ def update_hz(hz, hzx, hzy):
         for j in range(hz.shape[1]-1):
             hz[i,j] = hzx[i,j] + hzy[i,j]
 
-@numba.jit
 def make_step(d, p):
     """Make step"""
     update_ex(d['ex'], d['hz'], p['half_cfl']['y'])
@@ -169,7 +167,7 @@ def make_step(d, p):
     update_ezx(d['ezx'], d['hy'], p['half_cfl']['x'])
     update_ezy(d['ezy'], d['hx'], p['half_cfl']['y'])
     update_ez(d['ez'], d['ezx'], d['ezy'])
-    
+
     update_hx(d['hx'], d['ez'], p['half_cfl']['y'])
     update_hy(d['hy'], d['ez'], p['half_cfl']['x'])
     update_hzx(d['hzx'], d['ey'], p['half_cfl']['x'])

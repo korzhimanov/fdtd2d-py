@@ -9,6 +9,8 @@ import numpy as np
 import h5py
 import numba
 
+import timeit
+
 import fdtd2d
 
 import pytest
@@ -65,7 +67,7 @@ def test_init_data(data_empty, params_calculated):
     d = fdtd2d.init_data(params_calculated)
     for name in ('ex','ey','ezx','ezy','ez','hx','hy','hzx','hzy','hz'):
         assert((d[name] == data_empty[name]).all())
-    
+
 def test_field_generator_x_min(data_empty, params_calculated):
     d = copy.deepcopy(data_empty)
     p = params_calculated
@@ -107,9 +109,9 @@ def test_make_step(data_empty, params_calculated):
 
 def test_save_to_hdf5(data_empty):
     fdtd2d.save_to_hdf5("tests/output", 0, data_empty)
-    
+
     assert(os.path.exists("tests/output/data_0.hdf5"))
-    
+
     loaded_data = {}
     with h5py.File("tests/output/data_0.hdf5", "r") as f:
         for key, value in data_empty.items():
@@ -119,10 +121,10 @@ def test_save_to_hdf5(data_empty):
 
 def test_output(data_empty, params_calculated):
     assert(not fdtd2d.output(data_empty, 1, params_calculated))
-    
+
     assert(fdtd2d.output(data_empty, 10, params_calculated))
     assert(os.path.exists("tests/output/data_1.hdf5"))
-    
+
     loaded_data = {}
     with h5py.File("tests/output/data_1.hdf5", "r") as f:
         for key, value in data_empty.items():
@@ -138,4 +140,4 @@ def test_run(params_correct):
          h5py.File("tests/data/run.hdf5", "r") as correct_data:
         for key in correct_data.keys():
             assert(np.sum(np.array(calculated_data[key])
-                        - np.array(correct_data[key])) == 0.0)
+                        - np.array(correct_data[key])) == pytest.approx(0.0))
