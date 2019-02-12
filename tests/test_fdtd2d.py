@@ -9,8 +9,6 @@ import numpy as np
 import h5py
 import numba
 
-import timeit
-
 import fdtd2d
 
 import pytest
